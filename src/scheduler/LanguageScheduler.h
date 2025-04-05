@@ -6,15 +6,20 @@
 #include "../models/LanguageModel.h"
 
 struct LangRequest {
+  // 语言模型用户请求的结构
   uint32_t request_id;
+  // 是否正在执行此请求
   bool running;
+  // 是否属于decoding阶段
   bool gen_phase;
   uint64_t request_time;
   uint64_t start_time;
   uint64_t finish_time;
+  // 用户输入长度
   uint32_t prompt_length;
   uint32_t current_length;
   uint32_t target_length;
+  // KV Cache
   std::vector<std::unique_ptr<Tensor>> key_cache;
   std::vector<std::unique_ptr<Tensor>> value_cache;
 };
@@ -40,6 +45,7 @@ class LangScheduler {
     json _scheduler_config;
     std::string _name;
     std::unique_ptr<LanguageModel> _language_model;
+    // request队列，内部是指向<LangRequest>的智能指针
     std::queue<std::unique_ptr<LangRequest>> _request_queue;
     std::map<uint32_t, std::unique_ptr<LangRequest>> _active_requests;
     std::map<uint32_t, std::vector<uint32_t>> _requests_in_model;

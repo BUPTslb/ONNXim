@@ -36,6 +36,7 @@ BiasAct::BiasAct(SimulationConfig config, Model* model,
 BiasAct::BiasAct(SimulationConfig config, Model* model,
                std::string name, std::map<std::string, std::string> &attributes, uint32_t target_core)
     : Operation(config, model, name, attributes, target_core) {
+    // 设置激活函数类型
     _activation = activation_map.at(get_attribute("activation"));
     _use_bias = std::stoi(get_attribute("has_bias"));
     _llama_mlp = std::stoi(get_attribute("llama_mlp"));

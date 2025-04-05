@@ -1,0 +1,12 @@
+{
+    "models": [
+       {
+           "name": "QWEN2.5-7B",
+           "trace_file" : "input.csv",
+           "scheduler" : "simple",
+           "scheduler_config": {
+               "max_batch_size": 1 
+            }
+       }
+    ]
+   }

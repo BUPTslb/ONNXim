@@ -32,10 +32,11 @@ int main(int argc, char** argv) {
         e.what());
     throw(e);
   }
+  // 获取环境变量位置
   char* onnxim_path_env = std::getenv("ONNXIM_HOME");
   std::string onnxim_path = onnxim_path_env != NULL?
     std::string(onnxim_path_env) : std::string("./");
-
+  // 模型位置
   std::string model_base_path = fs::path(onnxim_path).append("models");
   std::string level = "info";
   cmd_parser.set_if_defined("log_level", &level);
@@ -50,17 +51,21 @@ int main(int argc, char** argv) {
   cmd_parser.set_if_defined("config", &config_path);
 
   json config_json;
+  // 打开配置文件
   std::ifstream config_file(config_path);
   if (!config_file) {
     spdlog::error("Error opening file: {}", config_path);
     exit(EXIT_FAILURE);
   }
 
+  // 将配置文件中的内容读取到json中
   config_file >> config_json;
   config_file.close();
+  // 初始化json文件
   SimulationConfig config = initialize_config(config_json);
   OperationFactory::initialize(config);
 
+  // 运行的模型类型：（默认、language mode）
   std::string mode = "default";
   bool language_mode = false;
   cmd_parser.set_if_defined("mode", &mode);
@@ -74,7 +79,7 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-
+  // 模型列表文件，--models_list example/language_models.json
   std::string models_list_path;
   cmd_parser.set_if_defined("models_list", &models_list_path);
   std::ifstream models_list_file(models_list_path);
@@ -86,22 +91,30 @@ int main(int argc, char** argv) {
   json models_list;
   models_list_file >> models_list;
   models_list_file.close();
+  // 配置模拟器对象
   auto simulator = std::make_unique<Simulator>(config, language_mode);
+  // language_models.json
   for (json model_config : models_list["models"]) {
     if(language_mode) {
+      // 模型名称
       std::string model_name = model_config["name"];
+      // 生成一个{model_base_path}/{language_models}/{model_name}.json字符串
       std::string model_path =
         fmt::format("{}/{}/{}.json", model_base_path, "language_models", model_name);
+      // 打开 model_path 指定的文件，并将文件流对象 model_file 与该文件关联
       std::ifstream model_file(model_path);
       if (!models_list_file) {
         spdlog::error("Error opening file: {}", model_path);
         exit(EXIT_FAILURE);
       }
+      // 输入trace
       std::string input_trace = "input.csv";
       cmd_parser.set_if_defined("trace_file", &input_trace);
       model_config["trace_file"] = input_trace;
 
+      // 定义要处理的模型
       json model_json = json::parse(model_file);
+      // make_unique 创建智能指针，引用LanguageModel::LanguageModel()构造LanguageModel
       auto model = std::make_unique<LanguageModel>(model_json, config, model_name);
       spdlog::info("Register Language Model: {}", model_name);
       simulator->register_language_model(model_config, std::move(model));

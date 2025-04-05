@@ -197,12 +197,15 @@ std::string Operation::get_attribute(std::string key) {
   return _attributes[key];
 }
 
+// 根据多维度索引和维度计算线性地址
 addr_type Operation::make_address(std::vector<uint32_t> index, std::vector<uint32_t> dims) {
     addr_type address;
+    // 检查索引和维度尺寸是否一致
     if(index.size() != dims.size()) {
         spdlog::error("Operation: make_address: index size is not equal to dims size ({}, {})", index.size(), dims.size());
         throw std::runtime_error("Attention: make_address: index size is not equal to dims size");
     }
+    // 检查对应的索引是否超出维度范围
     for(int i = 0; i < index.size(); i++) {
         if(index[i] >= dims[i]) {
             spdlog::error("Operation: make_address: index is out of bound ({}, {})", index[i], dims[i]);

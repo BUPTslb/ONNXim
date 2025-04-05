@@ -76,7 +76,7 @@ struct SimulationConfig {
    * Note: Each core belongs to one partition. Through these partition IDs,
    * it is possible to assign a specific DNN model to a particular group of cores.
    */
-  std::map<uint32_t, std::vector<uint32_t>> partiton_map;
+  std::map<uint32_t, std::vector<uint32_t>> partition_map;
 
   uint64_t align_address(uint64_t addr) {
     return addr - (addr % dram_req_size);

@@ -44,11 +44,26 @@ Concat::Concat(const Concat& src) : Operation(src) {
 	_axis = src._axis;
 }
 
+// 张量拼接
 Concat::Concat(SimulationConfig config, Model* model,
 							 std::string name, std::map<std::string, std::string> &attributes, uint32_t target_core)
 		: Operation(config, model, name, attributes, target_core) {
-			//TODO:implement this
+		//TODO:implement this
 		_axis = std::stoi(get_attribute("axis"));
+		// 合法性检查（与ONNX版本保持逻辑一致）
+		// assert(_axis >= 0 && _axis < 4);
+		// std::vector<uint32_t> output_shape;
+		// std::vector<uint32_t> input0_shape = parse_dims(get_attribute("input_shape"));
+		// std::vector<uint32_t> input1_shape = parse_dims(get_attribute("weight_shape"));
+		// output_shape.resize(input0_shape.size());
+		// for (int i = 0; i < input0_shape.size(); i++) {
+		// 	if (i == _axis)
+		// 		continue;
+		// 	assert(input0_shape[i] == input1_shape[i]);
+		// 	output_shape[i] = input0_shape[i];
+		// }
+		// output_shape[_axis] = input0_shape[_axis] + input1_shape[_axis];
+		
 }
 
 void Concat::initialize_tiles(MappingTable& mapping_table) {

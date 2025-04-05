@@ -31,7 +31,8 @@ extern std::string Bias;
 
 
 struct LangInput {
-  uint32_t request_id;
+  // 语言模型的输入结构，id，长度，
+  uint32_t request_id; 
   uint32_t seq_length;
   uint32_t context_length;
   std::vector<Tensor*> key_cache;

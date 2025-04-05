@@ -4,6 +4,7 @@
 #include "GemmWS.h"
 #include "Softmax.h"
 
+// 模型输入为onnx
 Attention::Attention(SimulationConfig config, Model* model,
                onnx::NodeProto& node_proto, uint32_t target_core)
     : Operation(config, model, node_proto, target_core) {
@@ -61,6 +62,7 @@ Attention::Attention(SimulationConfig config, Model* model,
     }
 }
 
+// 模型输入为json
 Attention::Attention(SimulationConfig config, Model* model, 
         std::string name, std::map<std::string, std::string>& attributes, uint32_t target_core)
     :Operation(config, model, name, attributes, target_core) {
@@ -215,7 +217,7 @@ void Attention::initialize_onnx_tiles(MappingTable& mapping_table) {
     }
 }
 
-// 일단 한 tile에는 최대 하나의 request만 있는 경우부터.
+// 一个 tile一次最多接受一个request.
 void Attention::initialize_instructions(Tile* tile, int head_idx, int num_heads) {
     // head_idx # start idx
     // num_heads
@@ -236,11 +238,14 @@ void Attention::initialize_instructions(Tile* tile, int head_idx, int num_heads)
     addr_type sram_k_ofs = sram_key_base + kv_head_idx * (_dk * seq_len) * _config.precision;
     addr_type sram_v_ofs = sram_value_base + kv_head_idx * (_dk * seq_len) * _config.precision;
     std::set<addr_type> dram_kv_addrs;    // = _key[req_idx]->get_all_addrs();
-
+    // 处理request
     for(int seq_idx = 0; seq_idx < seq_len; seq_idx++) {
         for(int i = 0; i <_dk; i++) {
+            // 设置索引：
             std::vector<uint32_t> idx = {(uint32_t)(kv_head_idx), (uint32_t)seq_idx, (uint32_t)i};
+            std::cout<<"dram_kv_addrs.insert部分：";
             dram_kv_addrs.insert(make_address(idx, _key_shape));
+            std::cout<<"dram_kv_addrs.insert部分正常";
         }
     }
     std::vector<addr_type> key_addrs, value_addrs;
@@ -273,8 +278,12 @@ void Attention::initialize_instructions(Tile* tile, int head_idx, int num_heads)
                 // key:  h, d_k, seq_len
                 std::vector<uint32_t> query_idx = {(uint32_t)(h_idx), (uint32_t)seq_idx, (uint32_t)i};
                 std::vector<uint32_t> output_idx = {(uint32_t)(h_idx), (uint32_t)seq_idx, (uint32_t)i};
+                std::cout<<"dram_query_addrs.insert部分：";
                 dram_query_addrs.insert(query_addr + make_address(query_idx, _query_shape));
+                std::cout<<"dram_query_addrs.insert部分正常：";
+                std::cout<<"dram_output_addrs.insert部分：";
                 dram_output_addrs.insert(ouput_addr + make_address(output_idx, _query_shape)); // Used query_shape intentionally
+                std::cout<<"dram_output_addrs.insert部分正常";
             }
         }
         // -- load --
@@ -365,7 +374,9 @@ void Attention::initialize_instructions(Tile* tile, Mapping mapping, int head_id
         if(kv_seq_index >= _seq) break;
         for(int i = 0; i <_dk; i++) {
             std::vector<uint32_t> idx = {(uint32_t)(kv_head_idx), (uint32_t)seq_idx, (uint32_t)i};
+            std::cout<<"dram_kv_addrs.insert部分：";
             dram_kv_addrs.insert(make_address(idx, _key_shape));
+            std::cout<<"dram_kv_addrs.insert部分正常";
         }
     }
 

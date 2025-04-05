@@ -24,5 +24,6 @@ class BiasAct : public Operation {
   uint32_t _tokens_per_tile;
   bool _llama_mlp;
   bool _use_bias;
+//   当前支持的操作为GELU
   Opcode _activation;
 };

@@ -150,6 +150,8 @@ cycle_type SystolicWS::get_vector_compute_cycles(std::unique_ptr<Instruction>& i
     case Opcode::MAC:
       return vec_op_iter * _config.core_config[_id].mac_latency;
     case Opcode::SWISH: //TODO: Implement SWISH
+      // 暂时认为silu和GELU的延迟是一样的
+      return vec_op_iter * _config.core_config[_id].gelu_latency;
     case Opcode::GELU:
       return vec_op_iter * _config.core_config[_id].gelu_latency;
     case Opcode::COMP:

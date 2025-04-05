@@ -35,6 +35,7 @@ LangScheduler::LangScheduler(std::string name, std::string path, std::unique_ptr
   _num_attention_heads = model_config["num_attention_heads"];
   _num_kv_heads = model_config["num_kv_heads"];
   _hidden_size = model_config["hidden_size"];
+  // 每层的kv cache参数维度 （_num_attention_heads / _num_kv_heads）:MHA=1,GQA=G
   _cache_dim = _hidden_size / _num_attention_heads * _num_kv_heads;
   _max_seq_length = model_config["max_seq_length"];
   if(_scheduler_config.contains("max_batch_size"))
@@ -89,11 +90,13 @@ void LangScheduler::cycle() {
 void LangScheduler::finish_model(uint32_t model_id) {
   for(auto req_id : _requests_in_model[model_id]) {
     std::vector<uint32_t> new_cache_dim;
+    // prefill阶段
     if(!_active_requests[req_id]->gen_phase) {
       uint32_t promtp_len = _active_requests[req_id]->prompt_length;
       _active_requests[req_id]->gen_phase = true;
       _active_requests[req_id]->current_length += promtp_len + 1;
     }
+    // decoding阶段
     else {
       _active_requests[req_id]->current_length += 1;
     }
@@ -116,6 +119,7 @@ bool LangScheduler::busy() {
   return !_model_queue.empty() || !_active_requests.empty() || !_request_queue.empty();
 }
 
+// 统计kv cache占用的存储空间
 uint64_t LangScheduler::get_kv_memory_size() {
   uint64_t kv_size = 0;
   for(auto iter = _active_requests.begin(); iter != _active_requests.end(); iter++) {
@@ -148,25 +152,33 @@ void LangScheduler::parse_request_trace(std::string path) {
     std::getline(ss, cached_len, ',');
     std::unique_ptr<LangRequest> request = std::make_unique<LangRequest>();
     time_offset += std::stoull(time);
+    // 根据csv中的内容创建request
     request->request_id = id++;
     request->request_time = time_offset;
     request->start_time = 0;
     request->running = false;
     request->prompt_length = std::stoi(prompt_length);
+    // 最终要处理的长度：输入+输出+cached
     request->target_length = std::stoi(cached_len) + std::stoi(prompt_length) + std::stoi(target_length);
+    // 当前已经cached长度
     request->current_length = std::stoi(cached_len);
+    // 把创建的request内容填到request队列中，智能指针
     _request_queue.push(std::move(request));
   }
   trace_file.close();
 }
 
+// 初始化当前要处理的request
 void LangScheduler::init_request(std::unique_ptr<LangRequest>& request) {
   request->start_time = _cycle;
   request->gen_phase = false;
   request->running = false;
+  // resize kv cache容器容量，将其扩展到与层级一致
   request->key_cache.resize(_num_sim_layers);
   request->value_cache.resize(_num_sim_layers);
+  // 维度：{当前已经存储的token长度，每层的kv cache参数维度}
   std::vector<uint32_t> first_dims = { request->current_length, _cache_dim};
+  // 为每一层初始化key value的cache
   for(uint32_t i = 0; i < _num_sim_layers; i++) {
     //Allocate max_seq_length x cache_dim tensor and redefine to 0 x cache_dim
     request->key_cache[i] = 
@@ -178,6 +190,7 @@ void LangScheduler::init_request(std::unique_ptr<LangRequest>& request) {
   }
 }
 
+// 初始化输入数据，准备模型执行推理
 void LangScheduler::init_inputs_and_model() {
   //Init inputs
   std::vector<LangInput> inputs;
@@ -186,18 +199,24 @@ void LangScheduler::init_inputs_and_model() {
     if(it->second->running == false) {
       LangInput input;
       input.request_id = it->first;
+      // decoding阶段
       if(it->second->gen_phase) {
         input.seq_length = 1;
+        // 当前上下文长度（已经存储kv cache的token数）
         input.context_length = it->second->current_length;
       }
+      // prefill阶段
       else {
         input.seq_length = it->second->prompt_length;
+        // 当前上下文长度（已经存储kv cache的token数）
         input.context_length = it->second->current_length;
       }
       for(uint32_t i = 0; i < _num_sim_layers; i++) {
+        // 获取当前请求kv cache智能指针管理的原始指针，将其填到input的kv cache中
         input.key_cache.push_back(it->second->key_cache[i].get());
         input.value_cache.push_back(it->second->value_cache[i].get());
       }
+      // 更新统计的token长度信息
       num_tokens += input.seq_length;
       inputs.push_back(input);
     }
@@ -215,6 +234,7 @@ void LangScheduler::init_inputs_and_model() {
     _model_queue.push(std::move(infer_model));
     float weight_size = _language_model->get_weight_size() /(1.0 GB);
     float kv_size = get_kv_memory_size() /(1.0 GB);
+    // 调用函数计算激活值需要的最大存储量:max(_qkv_out_dim, _ffn1_out_dim) * _config.precision
     float act_size = _language_model->get_act_size() /(1.0 GB) * num_tokens;
     float tot_mem = weight_size + kv_size + act_size;
     spdlog::info("Total Memory Usage: {:.2f} GB", tot_mem);

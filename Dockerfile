@@ -5,8 +5,9 @@ FROM ubuntu:20.04
 ARG DEBIAN_FRONTEND=noninteractive
 
 # Update and install software
-RUN apt-get update && apt-get install -y \
-    gcc-10 g++-10 python3.8 python3-pip git wget make \
+RUN apt-get update
+
+RUN apt-get install -y gcc-10 g++-10 python3.8 python3-pip git wget make \
     libssl-dev libasan5 libubsan1
 
 # Set GCC 10 as the default gcc and g++ compilers
@@ -25,7 +26,15 @@ RUN wget https://github.com/Kitware/CMake/releases/download/v3.22.0/cmake-3.22.0
     make install
 
 # Install specific Python packages with pip
-RUN pip3 install conan==1.57.0 transformers==4.40.1 onnx onnxruntime torch==2.3.1 torchvision optimum
+RUN pip3 install conan==1.57.0 
+
+RUN pip3 install transformers==4.40.1 
+RUN pip3 install onnx 
+RUN pip3 install onnxruntime 
+RUN pip3 install torch==2.3.1 
+RUN pip3 install torchvision 
+RUN pip3 install optimum
+
 
 # Copy your project files into the image
 COPY ./ ONNXim

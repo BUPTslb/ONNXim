@@ -25,9 +25,11 @@ Simulator::Simulator(SimulationConfig config, bool language_mode)
   char* onnxim_path_env = std::getenv("ONNXIM_HOME");
   std::string onnxim_path = onnxim_path_env != NULL?
   std::string(onnxim_path_env) : std::string("./");
+  // 设置DRAM类型：SIMPLE有bug，使用RAMULATOR1或2
   if (config.dram_type == DramType::SIMPLE) {
     _dram = std::make_unique<SimpleDram>(config);
-  } else if (config.dram_type == DramType::RAMULATOR1) {
+  } 
+  else if (config.dram_type == DramType::RAMULATOR1) {
     std::string ramulator_config = fs::path(onnxim_path)
                                        .append("configs")
                                        .append(config.dram_config_path)

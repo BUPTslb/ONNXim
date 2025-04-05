@@ -8,6 +8,7 @@
 #include "../operations/SkipLayerNorm.h"
 
 namespace BlockType {
+// 忽略了Embedding部分
 std::string Attention = "attn";
 std::string FeedForward = "ffn";
 }  // namespace BlockType
@@ -18,9 +19,13 @@ std::string QKVGen = "QKVgen";
 std::string Projection = "proj";
 std::string FullyConnected1 = "fc1";
 std::string FullyConnected2 = "fc2";
+// Language Model Head，语言模型头部，将模型输出的隐藏状态转换为词汇表上的概率分布，最后一层
 std::string LmHead = "lmhead";
+// 激活函数：ReLU、SiLU、GeLU等
 std::string Act = "act";
+// 键值缓存拼接（Key-Value Cache Concatenation），减少重复计算
 std::string KVCacheConcat = "KVccat";
+// 注意力拼接（Attention Concatenation）：将多个注意力头的输出拼接在一起
 std::string AttentionConcat = "Atccat";
 std::string Attention = "Attention";
 }  // namespace OperationType
@@ -30,7 +35,7 @@ std::string Weight = "weight";
 std::string Bias = "bias";
 }  // namespace ParameterType
 
-
+// 类的构造函数，继承自Model，输入{model_base_path}/{language_models}/{model_name}.json
 LanguageModel::LanguageModel(json llm_config, SimulationConfig config, std::string name) : Model(llm_config, config, name) {
   //Constructor for weight initialization
   //Not used for actual simulation
@@ -53,28 +58,34 @@ LanguageModel::LanguageModel(json llm_config, SimulationConfig config, std::stri
   _hidden_size = llm_config["hidden_size"];
   _num_kv_heads = llm_config["num_kv_heads"];
   _num_heads = llm_config["num_attention_heads"];
+  // [key的维度]*2+[Query的维度]=QKV的总维度
   _qkv_out_dim = _hidden_size / _num_heads * _num_kv_heads * 2 + _hidden_size;
   _qkv_out_dim /= _tensor_parallel_size;
   _num_kv_heads /= _tensor_parallel_size;
   _num_heads /= _tensor_parallel_size;
   _proj_in_dim = _hidden_size;
   _proj_in_dim /= _tensor_parallel_size;
+  // intermediate_size: MLP中gate较大一条边的维度
   _intermediate_size = llm_config["intermediate_size"];
   _intermediate_size /= _tensor_parallel_size;
 
   _ffn1_out_dim = _intermediate_size;
   _llama_mlp = _model_config["ffn_type"] == "llama";
+  // MLP中有gate和up两个同纬度的矩阵，因此需要乘以2
   if(_llama_mlp) {
     _ffn1_out_dim *= 2;
   }
 }
 
+// 初始化模型
 std::unique_ptr<LanguageModel> LanguageModel::generate_model(std::vector<LangInput>& reqs) {
   std::unique_ptr<LanguageModel> model = std::make_unique<LanguageModel>(_model_config, _config, _name);
   model->_root_node_id = _root_node_id;
   model->_reqs = reqs;
+  // 权重
   model->_wgt_map = _wgt_map;
   model->_wgt_size = _wgt_size;
+  // batch
   model->_num_batch = reqs.size();
   //Load KV Cache
   model->_key_cache_tensor_ids.resize(reqs.size());
@@ -102,25 +113,29 @@ void LanguageModel::register_operation(std::unique_ptr<Operation> op) {
   _operation_map[op->get_id()] = std::move(op);
 }
 
+// 根节点 ID、名称、维度、精度和是否初始化
+//创建一个新的张量
 std::unique_ptr<Tensor> LanguageModel::create_tensor(std::string name, std::vector<uint32_t> dims) {
   return std::make_unique<Tensor>(_root_node_id, name, dims, _config.precision, true);
 }
-
+//创建一个新的权重张量（Tensor）并将其注册到权重映射中。
 std::unique_ptr<Tensor> LanguageModel::create_weight(std::string name, std::vector<uint32_t> dims) {
   auto tensor = std::make_unique<Tensor>(_root_node_id, name, dims, _config.precision, true);
   _wgt_map[name] = tensor->get_id();
   return std::move(tensor);
 }
-
+//加载指定层和批次的键缓存张量 ID
 uint32_t LanguageModel::load_key_cache(uint32_t layer, uint32_t batch) {
   return _key_cache_tensor_ids[batch][layer];
 }
-
+//加载指定层和批次的值缓存张量 ID
 uint32_t LanguageModel::load_value_cache(uint32_t layer, uint32_t batch) {
   return _value_cache_tensor_ids[batch][layer];
 }
 
+// 把模型的权重信息全部加载到weight_table中
 void LanguageModel::initialize_weight(std::vector<std::unique_ptr<Tensor>>& weight_table) {
+  // 忽略了embedding层
   for(int l = 0; l < _num_sim_layers; l++) {
     auto attn = name_gen(LAYER(l), BlockType::Attention);
     weight_table.push_back(std::move(create_weight(name_gen(attn, OperationType::LayerNorm, ParameterType::Weight), {_hidden_size})));
@@ -133,9 +148,10 @@ void LanguageModel::initialize_weight(std::vector<std::unique_ptr<Tensor>>& weig
     auto ffn = name_gen(LAYER(l), BlockType::FeedForward);
     weight_table.push_back(std::move(create_weight(name_gen(ffn, OperationType::LayerNorm, ParameterType::Weight), {_hidden_size})));
     weight_table.push_back(std::move(create_weight(name_gen(ffn, OperationType::LayerNorm, ParameterType::Bias), {_hidden_size})));
-
+    // ffn1: gate和up
     weight_table.push_back(std::move(create_weight(name_gen(ffn, OperationType::FullyConnected1, ParameterType::Weight), {_hidden_size, _ffn1_out_dim})));
     weight_table.push_back(std::move(create_weight(name_gen(ffn, OperationType::FullyConnected1, ParameterType::Bias), {_ffn1_out_dim})));
+    // ffn2: down
     weight_table.push_back(std::move(create_weight(name_gen(ffn, OperationType::FullyConnected2, ParameterType::Weight), {_intermediate_size, _hidden_size})));
     weight_table.push_back(std::move(create_weight(name_gen(ffn, OperationType::FullyConnected2, ParameterType::Bias), {_hidden_size})));
   }
@@ -306,6 +322,7 @@ void LanguageModel::initialize_model(std::vector<std::unique_ptr<Tensor>>& weigh
     register_operation(std::move(ffn1_op));
     //Gelu
     std::string act_name = name_gen(LAYER(l), BlockType::FeedForward, OperationType::Act);
+    // 构建激活操作对象
     auto act_op = std::make_unique<BiasAct>(_config, (Model*) this, act_name, bias_act_attr, _target_core);
     act_op->add_input(ffn1_output_id);
     act_op->add_input(ffn1_bias_id);

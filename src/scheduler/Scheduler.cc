@@ -1,6 +1,7 @@
 #include "Scheduler.h"
 #include "../Simulator.h"
 
+// 调度策略： (ex. simple, spatial_split, time_multiplex, partition_cpu)
 std::unique_ptr<Scheduler> Scheduler::create(SimulationConfig config,
                                              const cycle_type* core_cycle, const uint64_t* core_time, void* simulator) {
   if (config.scheduler_type == "simple") {
@@ -22,7 +23,7 @@ std::unique_ptr<Scheduler> Scheduler::create(SimulationConfig config,
 Scheduler::Scheduler(SimulationConfig config, const cycle_type* core_cycle, const uint64_t* core_time, void* simulator)
     : _config(config), _core_cycle(core_cycle), _core_time(core_time) {
   //_core_executable_tile_queue.resize(_config.num_cores);
-  _partition_map = config.partiton_map;
+  _partition_map = config.partition_map;
   _simulator = simulator;
   //_executable_tile_queue.resize(_partition_map.size());
   for (const auto& pair: _partition_map) {
@@ -32,7 +33,7 @@ Scheduler::Scheduler(SimulationConfig config, const cycle_type* core_cycle, cons
       _cpu_to_partition[cpu] = partition_id;
     _executable_tile_queue[partition_id] = std::deque<std::unique_ptr<Tile>>();
   }
-
+// 为每个核心创建独立的任务队列,存储该核心需执行的Tile
   for (int i=0; i<config.num_cores;i++)
     _core_executable_tile_queue[i] = std::deque<std::unique_ptr<Tile>>();
 }

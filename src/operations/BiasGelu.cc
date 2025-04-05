@@ -1,6 +1,8 @@
 #include "BiasGelu.h"
 #include "../Model.h"
+// #include "../models/LanguageModel.h"
 
+// 输入为onnx的激活函数构造
 BiasGelu::BiasGelu(SimulationConfig config, Model* model,
                onnx::NodeProto& node_proto, uint32_t target_core)
     : Operation(config, model, node_proto, target_core) {
@@ -27,10 +29,22 @@ BiasGelu::BiasGelu(SimulationConfig config, Model* model,
     calculate_loops();
 }
 
+// 输入为模型配置的激活函数构造，没有使用
+// std::map<std::string, std::string>在languagemodel.cc中存在
 BiasGelu::BiasGelu(SimulationConfig config, Model* model,
                std::string name, std::map<std::string, std::string> &attributes, uint32_t target_core)
     : Operation(config, model, name, attributes, target_core) {
 //TODO:implement this
+
+        /* Load weight info from model config */
+        // _input_shape = parse_dims(get_attribute("input_shape"));
+        // _bias_shape = parse_dims(get_attribute("weight_shape"));
+        // _batch_size = 1;
+        // int _nh = std::stoi(get_attribute("num_heads"));
+        // int _dmodel = std::stoi(get_attribute("hidden_size"));
+        // _dk = _dmodel / _nh;
+        // _output_shape = _input_shape;
+        // calculate_loops();
 }
 
 void BiasGelu::initialize_tiles(MappingTable& mapping_table) {
@@ -112,8 +126,11 @@ void BiasGelu::initialize_instructions(Tile* tile, Mapping mapping, uint32_t tok
     }));
 }
 
+// SRAM双缓冲技术，将存储分一半，实现计算和预加载的重叠，提高并行性
 void BiasGelu::calculate_loops() {
+    // 每个token占用的字节数，dk是k的维度
     uint32_t size_per_token = _dk * _config.precision;
+    // SRAM的容量
     uint32_t sram_capacity = _config.core_config[target_core].spad_size KB / 2;  // unit: byte
 
     _tokens_per_tile = (sram_capacity / size_per_token) - 1; 

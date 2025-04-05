@@ -9,7 +9,7 @@ HOME = os.getenv("ONNXIM_HOME", default="../")
 size_list = [1, 2, 4, 8, 16, 32]
 
 parser = argparse.ArgumentParser(prog = 'ONNX generator')
-parser.add_argument('--model', required=True, help="support gpt2, gpt2-medium, gpt2-large, gpt2-xl, bert")
+parser.add_argument('--model', required=True, help="support gpt2, gpt2-medium, gpt2-large, gpt2-xl, bert,  qwen2.5-7b, Qwen2.5-1.5B-Instruct")
 args = parser.parse_args()
 if "gpt2" in args.model:
     onnx_path = pathlib.Path(f"{args.model}.onnx")
@@ -29,6 +29,7 @@ elif args.model == "bert":
         model = ORTModelForQuestionAnswering.from_pretrained("bert-large-uncased-whole-word-masking-finetuned-squad", export=True, provider="CPUExecutionProvider")
         model.save_pretrained("bert")
     optimized_model = optimizer.optimize_model(f"bert/model.onnx", model_type=args.model)
+
 else:
     print("Only gpt2, bert are supported...!")
     exit(1)
@@ -89,6 +90,50 @@ if "gpt2" in args.model:
 
         with open(f"{HOME}/model_lists/{args.model}_g_{size}.json", "w") as json_file:
             json.dump(config, json_file, indent=4)
+
+
+# Generate model_list json file
+# INPUT=1024
+if "QWEN" in args.model:
+     # QWEN prefill json
+        config = {
+            "models": [
+                    {
+                        "name": f"{args.model}",
+                        "batch_size": 1,
+                        "nr_atten": -1,
+                        "sequence_length": 1024,
+                        "seq_len": 1024,
+                        "past_seq_len": 0,
+                        "total_seq_len": 1024,
+                        "output_seq_len": 1025,
+                        "request_time": 0
+                    }
+                ]
+            }
+        with open(f"{HOME}/model_lists/{args.model}_s_{1}.json", "w") as json_file:
+            json.dump(config, json_file, indent=4)
+
+        # QWEN decode
+        config = {
+            "models": [
+                    {
+                        "name": f"{args.model}",
+                        "batch_size": 1,
+                        "nr_atten": -1,
+                        "sequence_length": 1,
+                        "seq_len": 1,
+                        "past_seq_len": 1024,
+                        "total_seq_len": 1025,
+                        "output_seq_len": 1125,
+                        "request_time": 0
+                    }
+                ]
+            }
+
+        with open(f"{HOME}/model_lists/{args.model}_g_{size}.json", "w") as json_file:
+            json.dump(config, json_file, indent=4)
+
 
 if "bert" in args.model:
     for size in size_list:

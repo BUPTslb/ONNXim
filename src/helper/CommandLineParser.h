@@ -8,7 +8,7 @@ LICENSE file in the root directory of this source tree.
 
 #include <boost/program_options.hpp>
 #include <iostream>
-
+// 为boost::program_options创建别名po
 namespace po = boost::program_options;
 
 class CommandLineParser {
@@ -77,6 +77,7 @@ class CommandLineParser {
    */
   template <typename T>
   void set_if_defined(const char* arg_name, T* target_var) const noexcept {
+    // 如果这个参数存在，将值赋给*target_var
     if (variables_map.count(arg_name) > 0) {
       *target_var = variables_map[arg_name].as<T>();
     }
