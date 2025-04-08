@@ -82,6 +82,7 @@ struct SimulationConfig {
     return addr - (addr % dram_req_size);
   }
 
+  // 脉动阵列OPS计算：MAC单元数量*计算频率（MHz=10^6）*2（乘法加法）
   float max_systolic_flops(uint32_t id) {
     return core_config[id].core_width * core_config[id].core_height * core_freq * 2 * num_cores / 1000; // GFLOPS
   }
@@ -90,6 +91,7 @@ struct SimulationConfig {
     return (core_config[id].vector_process_bit >> 3) / precision * 2 * core_freq / 1000; // GFLOPS
   }
 
+  // DRAM带宽计算：频率（MHz=10^6）*通道数*请求大小/完成一次突发需要的时钟周期数/1000
   float max_dram_bandwidth() {
     return dram_freq * dram_channels * dram_req_size / dram_nbl / 1000; // GB/s
   }

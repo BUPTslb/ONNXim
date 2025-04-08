@@ -1,0 +1,9 @@
+{
+    "models": [
+       {
+           "name": "qwen2.5-1.5b",
+           "batch_size" : 1
+       }
+    ]
+   }
+   

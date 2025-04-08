@@ -1,0 +1,6 @@
+[2025-04-08 02:41:41.994] [info] CPU 0: Partition 0
+[2025-04-08 02:41:41.994] [info] Running in language mode
+[2025-04-08 02:41:41.994] [info] Simulator Configuration:
+[2025-04-08 02:41:41.994] [info] [Core 0] Systolic Array Throughput: 8192 GFLOPS, Spad size: 16384 KB, Accumulator size: 2048 KB
+[2025-04-08 02:41:41.994] [info] DRAM Bandwidth 8192 GB/s
+[2025-04-08 02:41:41.994] [info] Ramulator2 config: ./configs/../configs/ramulator2_configs/HBM3.yaml

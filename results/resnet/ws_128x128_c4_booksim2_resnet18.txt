@@ -1,0 +1,1 @@
+[2025-04-07 14:05:15.756] [error] Error opening file: ./configs/configs/systolic_ws_128x128_c4_booksim2_tpuv4.json

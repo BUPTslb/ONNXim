@@ -243,9 +243,9 @@ void Attention::initialize_instructions(Tile* tile, int head_idx, int num_heads)
         for(int i = 0; i <_dk; i++) {
             // 设置索引：
             std::vector<uint32_t> idx = {(uint32_t)(kv_head_idx), (uint32_t)seq_idx, (uint32_t)i};
-            std::cout<<"dram_kv_addrs.insert部分：";
+            // std::cout<<"dram_kv_addrs.insert部分：";
             dram_kv_addrs.insert(make_address(idx, _key_shape));
-            std::cout<<"dram_kv_addrs.insert部分正常";
+            // std::cout<<"dram_kv_addrs.insert部分正常";
         }
     }
     std::vector<addr_type> key_addrs, value_addrs;
@@ -278,12 +278,12 @@ void Attention::initialize_instructions(Tile* tile, int head_idx, int num_heads)
                 // key:  h, d_k, seq_len
                 std::vector<uint32_t> query_idx = {(uint32_t)(h_idx), (uint32_t)seq_idx, (uint32_t)i};
                 std::vector<uint32_t> output_idx = {(uint32_t)(h_idx), (uint32_t)seq_idx, (uint32_t)i};
-                std::cout<<"dram_query_addrs.insert部分：";
+                // std::cout<<"dram_query_addrs.insert部分：";
                 dram_query_addrs.insert(query_addr + make_address(query_idx, _query_shape));
-                std::cout<<"dram_query_addrs.insert部分正常：";
-                std::cout<<"dram_output_addrs.insert部分：";
+                // std::cout<<"dram_query_addrs.insert部分正常：";
+                // std::cout<<"dram_output_addrs.insert部分：";
                 dram_output_addrs.insert(ouput_addr + make_address(output_idx, _query_shape)); // Used query_shape intentionally
-                std::cout<<"dram_output_addrs.insert部分正常";
+                // std::cout<<"dram_output_addrs.insert部分正常";
             }
         }
         // -- load --
@@ -374,9 +374,9 @@ void Attention::initialize_instructions(Tile* tile, Mapping mapping, int head_id
         if(kv_seq_index >= _seq) break;
         for(int i = 0; i <_dk; i++) {
             std::vector<uint32_t> idx = {(uint32_t)(kv_head_idx), (uint32_t)seq_idx, (uint32_t)i};
-            std::cout<<"dram_kv_addrs.insert部分：";
+            // std::cout<<"dram_kv_addrs.insert部分：";
             dram_kv_addrs.insert(make_address(idx, _key_shape));
-            std::cout<<"dram_kv_addrs.insert部分正常";
+            // std::cout<<"dram_kv_addrs.insert部分正常";
         }
     }
 
@@ -723,7 +723,7 @@ void Attention::calculate_loops(Mapping& mapping) {
         spdlog::info("[Attention] Spad size {}", _config.core_config[target_core].spad_size KB / 2);
         spdlog::info("[Attention] Accum spad size {}", _config.core_config[target_core].accum_spad_size KB / 2);
         mapping.total_loop.C = _dk;
-        mapping.total_loop.M = _seq;
+        mapping.total_loop.M = _seq; 
         mapping.tile_out_loop.C = 1;
         mapping.tile_in_loop.C = _dk;
         mapping.tile_in_loop.N = q_len * heads_per_kv;

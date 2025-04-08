@@ -104,7 +104,7 @@
   "icnt_freq" : 8400,
   "icnt_config_path" : "../configs/booksim2_configs/fly_c4_m32.icnt",
 
-  "precision" : 2,
+  "precision" : 1,
   "layout" : "NHWC",
   "scheduler" : "simple"
 }
