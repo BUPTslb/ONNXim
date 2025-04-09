@@ -26,10 +26,10 @@
     }
   },
 
-  "dram_type" : "ramulator2",
+  "dram_type" : "ramulator",
   "dram_freq" :500,
-  "dram_channels": 1024,
-  "dram_req_size": 8,
+  "dram_channels": 64,
+  "dram_req_size": 32,
   "dram_latency" : 10,
   "dram_size" : 64,
   "dram_nbl" : 1,
