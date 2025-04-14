@@ -4,7 +4,7 @@
   "num_kv_heads" : 8,
   "vocab_size" : 128256,
   "num_hidden_layers" : 32,
-  "hidden_size" : 4096,
+  "hidden_size" : 1536,
   "intermediate_size" : 14336,
   "ffn_type" : "llama",
   "max_seq_length" : 8192,
